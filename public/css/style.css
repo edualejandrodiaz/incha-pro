@@ -571,6 +571,11 @@ footer.page-footer .footer-copyright {
 
 
 .error {
+    
+    color: red;
+}
+
+input.error + div.error, textarea.error + div.error, select.error + div.error {
     color: red;
     font-size: 1.3vh;
     text-align: left;

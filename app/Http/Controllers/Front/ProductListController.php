@@ -8,6 +8,7 @@ use App\Models\ProductList;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 
 class ProductListController extends Controller
 {
@@ -53,8 +54,56 @@ class ProductListController extends Controller
      */
     public function show(Request $request)
     {
+        
         $product = ProductList::getProduct($request->id);
-        return view('front.pages.product-detail', compact('product'));
+        $addresses = $this->getAddresses( Session::get('inchalam.id') );
+        //para Chile le pasamos el 43
+        $cities = $this->getCities(43);
+        
+        return view('front.pages.product-detail', compact( 'product', 'cities', 'addresses'));
+    }
+
+    public function addAddress(Request $request){
+
+        $id = $request->session()->get('inchalam.id');
+
+        $insert = DB::table('oc_address')->insert([
+            [
+                
+                'customer_id'   => $id,
+                'firstname'     => $this->getFirstname($id),
+                'lastname'      => $this->getLastname($id),
+                'company'       => 'inchalam',
+                'address_1'     => $request->street,
+                'address_2'     => $request->completa,
+                'postcode'      => '41000',
+                'city'          => $request->city,
+                'country_id'    => 43,
+                'zone_id'       => $request->state,
+                'custom_field'  => 'algun texto'
+
+            ]
+        ]);
+
+        if($insert){
+
+            $msg = array(
+                'result' => 'success',
+                'mensaje' => 'se ha realizado la acción con éxito'
+            );    
+    
+
+        } else {
+
+            $msg = array(
+                'result' => 'error',
+                'mensaje' => 'se ha producido un error'
+            );    
+
+        }                
+        
+
+        return response()->json($msg, 200);
     }
 
     /**
@@ -97,14 +146,38 @@ class ProductListController extends Controller
      */
     public function orderAdd(Request $request)
     {
-        $datos = new Collection();
-        // $datos->customer_rut = '268726101';
-        $datos->customer_rut = $request->session()->get('inchalam.rut');
-        $datos->data_coment = 'Canje';
-        $datos->group_id = Config::get('app.rest_api.group_id');
-        $datos->dataV = json_encode(array(array('id' => $request->id, 'cantidad' => 1)));
+        
+        $id = $request->session()->get('inchalam.id');
 
-        $product = ProductList::getProduct($request->id);
+
+        
+        $datos = new Collection();
+       
+        $datos->customer_rut = $request->session()->get('inchalam.rut');
+        $datos->data_coment = $request->comentario;
+        $datos->group_id = Config::get('app.rest_api.group_id');
+        $datos->dataV = json_encode(
+                                    array(
+                                        array(
+                                            'id' => $request->producto_id, 
+                                            'cantidad' => 1
+                                        )));
+
+        
+
+        $datos->dataU = json_encode(
+                                    array(
+                                        array(
+                                            'firstname'         =>  $this->getFirstname($id),
+                                            'lastname'          =>  $this->getLastname($id),
+                                            'email'             =>  $this->getEmail($id),
+                                            'telephone'         =>  $this->getFono($id),
+                                            'shipping_address_1'=> $request->addAddress,
+                                            
+                                        )));
+        
+
+        $product = ProductList::getProduct($request->producto_id);
         $puntos = $this->getPuntos($request->session()->get('inchalam.id'));
         $cargo = ($product->special <> null) ? $product->special : $product->price;
 
@@ -121,6 +194,7 @@ class ProductListController extends Controller
                 $insert = DB::table('oc_customer_reward')->insert([
                     [
                         'customer_id' => $request->session()->get('inchalam.id'),
+                        'order_id'  => $numOrder,      
                         'description' => 'Se hizo un canje',
                         'points'=>-$cargo,
                         'date_added'=>date('Y-m-d H:i:s'),

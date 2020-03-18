@@ -86,6 +86,68 @@ class Controller extends BaseController
         return  $usuario->firstname;
 
     }
+
+    public static function getLastname($id){
+
+        $usuario = DB::table('oc_customer')
+        ->where('id', '=', $id)
+        ->first();
+
+        return  $usuario->lastname;
+
+    }
+
+    /**
+     * Obtiene las direcciones almacenadas en la base de datos local
+     * cuando se realiza una orden o se efectúa un canje
+     * 
+     * @param int $id identificador del usuario
+     * @return array
+     */
+
+     public static function getAddresses($id){
+
+        $rewards = DB::table('oc_address')
+        ->where('customer_id', '=', $id)->get();
+
+        return  $rewards->toArray();
+
+     }
+
+    /**
+     * Obtiene las regiones y ciudades de un pais indexados
+     * en un array
+     * 
+     * @param int $id identificador del país
+     * @return array
+     */
+
+     public static function getCities(int $id){
+
+       
+            $cities = DB::table('oc_zone')
+            ->leftJoin('oc_zone_comuna', 'oc_zone.zone_id', '=', 'oc_zone_comuna.zone_id')
+            ->select('oc_zone.zone_id AS region_id', 'oc_zone.name AS region','oc_zone_comuna.id AS comuna_id','oc_zone_comuna.name AS comuna')
+            ->where('oc_zone.country_id', '=', $id)
+            ->get();
+
+            
+
+                $ciudades = [];
+                $regiones = [];
+
+                foreach($cities as $city){
+                    $ciudades[$city->region_id][$city->comuna_id] =$city->comuna;
+                    $regiones[$city->region_id]   = $city->region;
+
+                }
+
+                
+                    
+                return  array('regiones'=>$regiones,'ciudades'=>$ciudades);
+     }
+
+
     /**
      * Obtiene los movimientos de abonos y canjes desde la base de datos local
      * 

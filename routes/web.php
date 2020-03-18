@@ -17,7 +17,12 @@ Route::get('/', function () {
 Route::get('/home', 'Front\HomeController@index')->name('home');
 Route::resource('/catalogo', 'Front\ProductListController')->only(['index']);
 Route::get('/catalogo/canjear/{slug}/{id}', 'Front\ProductListController@show')->name('catalogo.show');
-Route::get('/catalogo/canje/producto/{slug}/{id}', 'Front\ProductListController@orderAdd')->name('catalogo.order-add');
+
+Route::get('/catalogo/add-address', 'Front\ProductListController@addAddress')->name('catalogo.add-address');
+
+//Route::get('/catalogo/canje/producto/{slug}/{id}', 'Front\ProductListController@orderAdd')->name('catalogo.order-add');
+Route::post('/catalogo/canje/producto', 'Front\ProductListController@orderAdd')->name('catalogo.order-add');
+
 Route::post('/catalogo', 'Front\ProductListController@productCategories')->name('catalogo.categories');
 Route::get('/giftcard/canjear/{slug}', 'Front\GiftcardController@show')->name('giftcard.show');
 

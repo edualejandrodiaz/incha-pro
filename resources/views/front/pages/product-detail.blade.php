@@ -58,15 +58,93 @@
                           <span aria-hidden="true">&times;</span>
                         </button>
                       </div>
+                      
+                      <form id="addressForm" method="POST" action="{{ route('catalogo.order-add') }}">
+                      {{ csrf_field() }}
+                      
+                      <!-- ruta antigua : route('catalogo.order-add', [ Str::slug($product->name), $product->product_id ]) -->
+                      <!-- body modal -->
                       <div class="modal-body">
                         Estás a punto de realizar un canje ¿Deseas continuar?
-                      </div>
+ 
+                            <div class="form-group">
+                              <label for="addAddress">Dirección</label>
+                              <select id="addAddress" name="addAddress" class="form-control" style="display: block!important;" {{ empty($addresses) ? 'readonly' : '' }}>
+                                  @if( empty($addresses) )
+                                  <option value="0">No existen direcciones</option>
+                                  @else
+                                    @foreach( $addresses as $address)
+
+                                      
+                                      <option id="{{ $address->address_id }}">{{ $address->address_2 }}</option>
+
+                                    @endforeach
+                                  @endif
+                                </select>
+                            </div>
+                            
+                            
+                            <a class="p-0 color-celeste" id="addAddress" 
+                            data-toggle="collapse"  
+                            href="#collapseAdress">Agregar dirección <em class="fas fa-plus-circle"></em>
+                            </a>
+                            
+                            <div class="collapse" id="collapseAdress">
+
+
+                              <!-- Direccion -->
+                              <div class="form-group">
+                                <label for="inputAddress2">Ingrese Dirección</label>
+                                <input type="hidden" name="ruta-add-address" id="ruta-add-address" value="{{ route('catalogo.add-address') }}" />
+                                <input type="text" class="form-control" id="inputAddress2" name="inputAddress2" placeholder="Calle, Número, Departamento">
+                              </div>
+     
+ 
+                              <!-- Región y Ciudad -->
+                              <div class="form-row">
+
+                                <div class="form-group col-md-6">
+                                  <label for="inputState">Región</label>
+                                  <select id="inputState" class="form-control" style="display: block!important;">
+                                  @foreach( $cities['regiones'] as $region_code => $region_value )
+                                      <option value="{{ $region_code }}">{{ $region_value }}</option>
+                                  @endforeach
+                                  </select>
+                                </div>
+                                <div class="form-group col-md-6">
+                                  <label for="inputCity">Ciudad</label>
+                                  <select id="inputCity" class="form-control" style="display: block!important;">
+                                  @foreach( $cities['ciudades'][4222] as $ciudad_code => $ciudad_value )
+                                      <option value="{{ $ciudad_code }}">{{ $ciudad_value }}</option>
+                                  @endforeach
+                                  </select>
+                                </div>
+                              
+                              </div>
+                              <!-- End Región y Ciudad -->
+
+                              
+                          
+                              <button type="button" id="addAddressAction" class="btn btn-primary">Agregar</button>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="comentario">Comentario</label>
+                                <textarea class="form-control" id="comentario" name="comentario" rows="3"></textarea>
+                              </div>
+                      </div><!-- End Body Modal -->
+
                       <div class="modal-footer">
+                        
+                        <input type="hidden" name="producto_id" value="{{ $product->product_id }}" />
+                        <input type="hidden" name="direccion" value="{{ empty($addresses) ? 0 : 1 }}" /> 
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-                        <form method="get" action="{{ route('catalogo.order-add', [ Str::slug($product->name), $product->product_id ]) }}">
+                        
                         <button type="submit" class="btn btn-primary">Canjear Ahora</button>
-                        </form>
+                        
                       </div>
+
+                      </form>
                     </div>
                   </div>
                 </div>
@@ -99,9 +177,137 @@
         </div>
       </div>
     </div>
+  
+  
+  
   </div>
+
+</div>
+
 </section>
 @endsection
 @section('footer')
 @include('front.includes.footer')
+<script type="text/javascript">
+
+var ciudades = @json( $cities );
+
+
+$( document ).ready(function(){
+
+  $("#inputState").change(function () {
+
+    $("#inputCity").find("option:gt(0)").remove();
+    $("#inputCity").find("option:first").text("Loading...");
+
+    var comunas = ciudades.ciudades[this.value];
+    //console.log(comunas);
+
+    $("#inputCity").find("option").remove();
+
+    Object.keys(comunas).forEach(function(key) {
+      console.log(key, comunas[key]);
+      $("<option/>").attr("value", key).text(comunas[key]).appendTo($("#inputCity"));
+    });
+
+
+  });
+
+  $('#addAddressAction').click(function(e){
+
+      var calle = $('#inputAddress2').val();
+      var calle_txt = $('#inputAddress2 option:selected').text();
+
+      var region = $("#inputState").val();
+      var region_txt = $("#inputState option:selected").text();
+
+      var comuna = $("#inputCity").val();
+      var comuna_txt = $("#inputCity option:selected").text();
+
+      var ruta = $("#ruta-add-address").val();
+
+      var validator = $( "#addressForm" ).validate();
+      //validator.element( "#inputAddress2" );
+      var address = calle+", "+comuna_txt+", "+region_txt;
+      console.log(address);
+
+      if( validator.element( "#inputAddress2" ) ){
+
+          $.ajax({
+                  
+                  type       :'GET',
+                  dataType   :'json',
+                  url: ruta,
+                  data: { street: calle, city:comuna, state: region, completa: address},
+                  success: function (msg) {
+                      console.log("TCL: msg", msg)
+                      if (msg.result == 'success') {
+
+                        if( $('#addAddress').prop("disabled") ){
+                          $('#addAddress').prop("disabled", false);
+                          $('#addAddress').find('option').get(0).remove();
+                        } 
+
+                        if( $("#addAddress").attr("readonly") ){
+
+                          $("#addAddress").attr("readonly", false);
+                          $('#addAddress').find('option').get(0).remove();
+
+                        }
+                        validator.element( "#addAddress" )
+                        $('#addAddress').removeClass('error');
+                        
+                        //cambia a 1 direccion
+                        
+
+                        $('#inputAddress2').val('');
+
+                        $('#collapseAdress').collapse('hide');
+
+                        $('#addAddress').prepend(new Option(address, address, true, true));
+                        console.log('exito de la consulta');
+
+                      } else {
+                          console.log('error en la consulta');
+                          //$("#msgLogin").html(msg.result);
+                          //$("#msgLogin").show();
+                          //$("#submitLogin").prop("disabled", false);
+                      }
+                  }
+          });
+
+      }
+
+  
+
+
+
+  });
+
+  $.validator.addMethod("noEsIgual", function(value, element, arg){
+    console.log('argumento',arg);
+    console.log('valor',value);
+  return arg !== value;
+ }, "Debe agregar una dirección.");
+
+
+  $("#addressForm").validate({
+        rules: {
+            'addAddress': { noEsIgual: '0' },
+            'comentario': 'required'
+        },
+        errorElement: "div",
+        messages: {
+          'addAddress': { noEsIgual: "Debe agregar una dirección" }
+        }
+        
+    });
+
+
+
+});
+
+
+
+</script>
 @endsection
